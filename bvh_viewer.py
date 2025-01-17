@@ -8,6 +8,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+# [Previous Joint and BVHParser classes remain unchanged]
 class Joint:
     def __init__(self, name, offset):
         self.name = name
@@ -123,7 +124,6 @@ class GLWidget(QOpenGLWidget):
         glPushMatrix()
         glTranslatef(*joint.offset)
         
-        # Handle negative scale by using absolute value for point size
         glPointSize(max(0.1, abs(5.0 * self.scale)))
         glColor3f(1.0, 0.5, 0.0)
         glBegin(GL_POINTS)
@@ -136,7 +136,6 @@ class GLWidget(QOpenGLWidget):
             for child in joint.children:
                 glVertex3f(0, 0, 0)
                 if self.scale < 0:
-                    # Invert child offset for negative scale
                     glVertex3f(*(-child.offset))
                 else:
                     glVertex3f(*child.offset)
@@ -171,7 +170,6 @@ class GLWidget(QOpenGLWidget):
         glRotatef(self.rotation[0], 1, 0, 0)
         glRotatef(self.rotation[1], 0, 1, 0)
         
-        # Apply scale matrix
         glScalef(abs(self.scale), abs(self.scale), abs(self.scale))
         
         if self.animation_data and self.animation_data.root:
@@ -185,9 +183,16 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("BVH Viewer")
         self.current_file_index = 0
         self.bvh_files = []
+        self.current_filename = ""
 
         main_widget = QWidget()
         layout = QVBoxLayout()
+        
+        # Add filename label at the top
+        self.filename_label = QLabel("No file loaded")
+        self.filename_label.setAlignment(Qt.AlignCenter)
+        self.filename_label.setStyleSheet("font-weight: bold; padding: 5px;")
+        layout.addWidget(self.filename_label)
         
         self.gl_widget = GLWidget()
         layout.addWidget(self.gl_widget)
@@ -197,13 +202,12 @@ class MainWindow(QMainWindow):
         self.prev_btn = QPushButton("Previous")
         self.next_btn = QPushButton("Next")
         
-        # Modified scale slider with new range
         scale_layout = QHBoxLayout()
         scale_layout.addWidget(QLabel("Scale:"))
         self.scale_slider = QSlider(Qt.Horizontal)
-        self.scale_slider.setRange(-200, 400)  # New range
-        self.scale_slider.setValue(100)  # Default value
-        self.scale_value_label = QLabel("1.0")  # Add label to show actual scale value
+        self.scale_slider.setRange(-200, 400)
+        self.scale_slider.setValue(100)
+        self.scale_value_label = QLabel("1.0")
         scale_layout.addWidget(self.scale_slider)
         scale_layout.addWidget(self.scale_value_label)
         
@@ -234,11 +238,17 @@ class MainWindow(QMainWindow):
         self.gl_widget.update()
 
     def update_scale(self, value):
-        # Convert slider value to scale factor
         scale = value / 100.0
         self.gl_widget.scale = scale
-        self.scale_value_label.setText(f"{scale:.2f}")  # Update scale value label
+        self.scale_value_label.setText(f"{scale:.2f}")
         self.gl_widget.update()
+
+    def update_filename_label(self, filename):
+        if filename:
+            basename = os.path.basename(filename)
+            self.filename_label.setText(f"Current Animation: {basename}")
+        else:
+            self.filename_label.setText("No file loaded")
 
     def load_directory(self):
         directory = QFileDialog.getExistingDirectory(self)
@@ -252,8 +262,10 @@ class MainWindow(QMainWindow):
         try:
             self.gl_widget.animation_data = BVHParser(filename)
             self.gl_widget.current_frame = 0
+            self.update_filename_label(filename)
         except Exception as e:
             print(f"Error loading {filename}: {e}")
+            self.update_filename_label(None)
 
     def next_animation(self):
         if self.bvh_files:
