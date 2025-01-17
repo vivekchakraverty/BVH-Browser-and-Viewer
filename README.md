@@ -11,7 +11,7 @@ Zoom in and out through slider
 
 Rotate view by using the middle mouse button in the viewport
 
-To use, simply run the batch file.
+To use, place the batch and python files in same folder and simply run the batch file. Then load the folder where the bvh animations are present and you can now view and browse through the animations by clicking the relevant button.
 
 Dependencies:
 
